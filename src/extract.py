@@ -1,65 +1,95 @@
 """
-Fase EXTRACT del ETL
-Extrae datos de datasets públicos y manuales
+Extraction helpers for the Flipkart sample dataset.
+Reads the CSV defined in config and can print a preview of the first rows.
 """
 
+from pathlib import Path
+from typing import Tuple
+
 import pandas as pd
-from config import KAGGLE_CSV, MANUAL_CSV
+
+from config import KAGGLE_CSV
+
+DEFAULT_SAMPLE_SIZE = 50
 
 
-def extract_kaggle_data():
-    """Extrae datos del dataset público de Kaggle"""
-    print("\n📥 EXTRACT - Dataset Público (Kaggle)")
-    print("=" * 50)
+def load_flipkart_data(csv_path: str = KAGGLE_CSV) -> pd.DataFrame:
+    """
+    Load the Flipkart sample CSV into a DataFrame.
 
-    try:
-        df = pd.read_csv(KAGGLE_CSV)
+    Parameters
+    ----------
+    csv_path: str
+        Path to the Flipkart CSV file.
 
-        print(f"✅ Extraídas {len(df)} películas de Kaggle")
-        print(f"📊 Columnas: {list(df.columns)}")
+    Returns
+    -------
+    pd.DataFrame
+        Raw dataset.
+    """
+    path = Path(csv_path)
+    if not path.is_file():
+        raise FileNotFoundError(f"Could not find CSV at {path.resolve()}")
 
-        return df
+    df = pd.read_csv(path)
+    print(f"[EXTRACT] Loaded {len(df)} rows from {path}")
+    print(f"[EXTRACT] Columns: {list(df.columns)}")
+    return df
 
-    except FileNotFoundError:
-        print(f"❌ No se encontró: {KAGGLE_CSV}")
-        return None
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return None
+def preview_data(df: pd.DataFrame, sample_size: int = DEFAULT_SAMPLE_SIZE) -> pd.DataFrame:
+    """
+    Return and display the first N rows of a DataFrame.
+
+    Parameters
+    ----------
+    df: pd.DataFrame
+        DataFrame to preview.
+    sample_size: int
+        Number of rows to display (defaults to 50).
+
+    Returns
+    -------
+    pd.DataFrame
+        The sampled rows.
+    """
+    if sample_size <= 0:
+        raise ValueError("sample_size must be a positive integer")
+
+    sample = df.head(sample_size)
+    print(f"[PREVIEW] Showing the first {len(sample)} rows")
+    print(sample)
+    return sample
 
 
-def extract_manual_data():
-    """Extrae datos del dataset manual"""
-    print("\n📥 EXTRACT - Dataset Manual")
-    print("=" * 50)
+def extract_flipkart(sample_size: int = DEFAULT_SAMPLE_SIZE) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Load the Flipkart dataset and return it along with a small preview.
 
-    try:
-        df = pd.read_csv(MANUAL_CSV)
+    Parameters
+    ----------
+    sample_size: int
+        Number of rows to include in the preview (defaults to 50).
 
-        print(f"✅ Extraídas {len(df)} preferencias")
-        print(f"📊 Columnas: {list(df.columns)}")
-
-        return df
-
-    except FileNotFoundError:
-        print(f"❌ No se encontró: {MANUAL_CSV}")
-        return None
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return None
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame]
+        Raw dataset and preview sample.
+    """
+    df = load_flipkart_data()
+    sample = preview_data(df, sample_size)
+    return df, sample
 
 
-def extract_all():
-    """Extrae todos los datasets"""
-    kaggle = extract_kaggle_data()
-    manual = extract_manual_data()
-
-    return kaggle, manual
+def extract_all() -> Tuple[pd.DataFrame, None]:
+    """
+    Backwards-compatible helper expected by the rest of the pipeline.
+    Returns the full dataset and None for manual data (not used here).
+    """
+    df = load_flipkart_data()
+    return df, None
 
 
 if __name__ == "__main__":
-    print("🎬 FASE EXTRACT")
-    kaggle_movies, user_preferences = extract_all()
-
-    if kaggle_movies is not None and user_preferences is not None:
-        print("\n🎉 Extracción completada!")
+    print("[EXTRACT] Starting Flipkart extraction")
+    raw_df, preview_df = extract_flipkart()
+    print(f"[EXTRACT] Extraction complete. Rows loaded: {len(raw_df)} | Preview rows: {len(preview_df)}")

@@ -4,7 +4,6 @@ Configuración centralizada para MongoDB y Redis
 
 from pymongo import MongoClient
 import redis
-import os
 
 # ===== CONFIGURACIÓN MONGODB =====
 MONGO_URI = "mongodb://localhost:27017/"
@@ -52,18 +51,14 @@ def get_redis_connection():
 
 
 # ===== RUTAS DE ARCHIVOS =====
-# Las rutas son relativas al directorio donde ejecutas el script
-KAGGLE_CSV = "data/raw/IMDB_Top_250_Movies.csv"
+KAGGLE_CSV = "data/raw/flipkart_com-ecommerce_sample.csv"
 MANUAL_CSV = "data/raw/dataset_manual_IMDB_Top250.csv"
-PROCESSED_CSV = "data/processed/movies_final.csv"
-
 
 if __name__ == "__main__":
     print("🧪 Probando configuración...")
     print(f"\n📁 Dataset Kaggle: {KAGGLE_CSV}")
     print(f"📁 Dataset Manual: {MANUAL_CSV}")
-    print(f"📁 Datos procesados: {PROCESSED_CSV}")
-
+    
     print("\n🧪 Probando conexiones...")
 
     mongo_client, mongo_db, mongo_col = get_mongo_connection()
@@ -73,3 +68,4 @@ if __name__ == "__main__":
         print("\n🎉 ¡Todas las conexiones funcionan!")
     else:
         print("\n⚠️ Revisa tu configuración")
+        
