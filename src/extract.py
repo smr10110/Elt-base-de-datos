@@ -1,95 +1,54 @@
 """
-Extraction helpers for the Flipkart sample dataset.
-Reads the CSV defined in config and can print a preview of the first rows.
+Etapa EXTRACT: Lee datasets crudos de Amazon y simulación de carritos Redis.
+Para ETL con MongoDB (catálogo) y Redis (carritos en tiempo real).
 """
 
 from pathlib import Path
-from typing import Tuple
-
+from typing import Optional, Tuple
 import pandas as pd
 
-from config import KAGGLE_CSV
-
-DEFAULT_SAMPLE_SIZE = 50
+from src.config import AMAZON_CSV, REDIS_CART_CSV
 
 
-def load_flipkart_data(csv_path: str = KAGGLE_CSV) -> pd.DataFrame:
-    """
-    Load the Flipkart sample CSV into a DataFrame.
-
-    Parameters
-    ----------
-    csv_path: str
-        Path to the Flipkart CSV file.
-
-    Returns
-    -------
-    pd.DataFrame
-        Raw dataset.
-    """
-    path = Path(csv_path)
+def _load_csv(path_str: str) -> Optional[pd.DataFrame]:
+    """Lee un CSV y devuelve un DataFrame."""
+    path = Path(path_str)
     if not path.is_file():
-        raise FileNotFoundError(f"Could not find CSV at {path.resolve()}")
+        print(f"[EXTRACT] No se encontró el archivo: {path}")
+        return None
 
     df = pd.read_csv(path)
-    print(f"[EXTRACT] Loaded {len(df)} rows from {path}")
-    print(f"[EXTRACT] Columns: {list(df.columns)}")
+    print(f"[EXTRACT] Leído {len(df)} filas de {path}")
     return df
 
-def preview_data(df: pd.DataFrame, sample_size: int = DEFAULT_SAMPLE_SIZE) -> pd.DataFrame:
-    """
-    Return and display the first N rows of a DataFrame.
 
-    Parameters
-    ----------
-    df: pd.DataFrame
-        DataFrame to preview.
-    sample_size: int
-        Number of rows to display (defaults to 50).
-
-    Returns
-    -------
-    pd.DataFrame
-        The sampled rows.
-    """
-    if sample_size <= 0:
-        raise ValueError("sample_size must be a positive integer")
-
-    sample = df.head(sample_size)
-    print(f"[PREVIEW] Showing the first {len(sample)} rows")
-    print(sample)
-    return sample
+def load_amazon_data() -> Optional[pd.DataFrame]:
+    """Carga el dataset de productos Amazon para MongoDB."""
+    return _load_csv(AMAZON_CSV)
 
 
-def extract_flipkart(sample_size: int = DEFAULT_SAMPLE_SIZE) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Load the Flipkart dataset and return it along with a small preview.
-
-    Parameters
-    ----------
-    sample_size: int
-        Number of rows to include in the preview (defaults to 50).
-
-    Returns
-    -------
-    tuple[pd.DataFrame, pd.DataFrame]
-        Raw dataset and preview sample.
-    """
-    df = load_flipkart_data()
-    sample = preview_data(df, sample_size)
-    return df, sample
+def load_redis_cart_simulation() -> Optional[pd.DataFrame]:
+    """Carga la simulación de carritos para Redis."""
+    return _load_csv(REDIS_CART_CSV)
 
 
-def extract_all() -> Tuple[pd.DataFrame, None]:
-    """
-    Backwards-compatible helper expected by the rest of the pipeline.
-    Returns the full dataset and None for manual data (not used here).
-    """
-    df = load_flipkart_data()
-    return df, None
+def extract_all() -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
+    """Ejecuta la etapa EXTRACT leyendo ambos datasets."""
+    print("\n[EXTRACT] Iniciando extracción de datos...\n")
+
+    amazon_df = load_amazon_data()
+    redis_cart_df = load_redis_cart_simulation()
+
+    if amazon_df is not None:
+        print(f"\n[EXTRACT] Productos Amazon: {len(amazon_df)} registros")
+        print(amazon_df[['product_name', 'discounted_price', 'category']].head(5))
+
+    if redis_cart_df is not None:
+        print(f"\n[EXTRACT] Eventos de carrito: {len(redis_cart_df)} eventos")
+        print(redis_cart_df[['cart_id', 'event_type', 'product_id', 'quantity']].head(5))
+
+    return amazon_df, redis_cart_df
 
 
 if __name__ == "__main__":
-    print("[EXTRACT] Starting Flipkart extraction")
-    raw_df, preview_df = extract_flipkart()
-    print(f"[EXTRACT] Extraction complete. Rows loaded: {len(raw_df)} | Preview rows: {len(preview_df)}")
+    extract_all()

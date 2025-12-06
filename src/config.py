@@ -1,71 +1,72 @@
 """
-Configuración centralizada para MongoDB y Redis
+Configuracion centralizada para MongoDB, Redis y rutas del dataset de Flipkart.
 """
 
 from pymongo import MongoClient
 import redis
 
-# ===== CONFIGURACIÓN MONGODB =====
+# ===== CONFIGURACION MONGODB =====
 MONGO_URI = "mongodb://localhost:27017/"
-MONGO_DB = "cinema_db"
-MONGO_COLLECTION = "movies"
+MONGO_DB = "amazon_db"
+MONGO_COLLECTION = "amazon_products"
 
-def get_mongo_connection():
-    """Obtiene conexión a MongoDB"""
+
+def get_mongo_connection(collection_name: str = MONGO_COLLECTION):
+    """Obtiene conexion a MongoDB (coleccion elegible)."""
     try:
         client = MongoClient(MONGO_URI)
         db = client[MONGO_DB]
-        collection = db[MONGO_COLLECTION]
+        collection = db[collection_name]
 
-        client.server_info()  # Probar conexión
-        print("✅ Conexión a MongoDB exitosa")
+        client.server_info()  # Probar conexion
+        print("Conectado a MongoDB")
 
         return client, db, collection
     except Exception as e:
-        print(f"❌ Error conectando a MongoDB: {e}")
+        print(f"Error conectando a MongoDB: {e}")
         return None, None, None
 
 
-# ===== CONFIGURACIÓN REDIS =====
+# ===== CONFIGURACION REDIS =====
 REDIS_HOST = "localhost"
 REDIS_PORT = 6379
 REDIS_DB = 0
 
+
 def get_redis_connection():
-    """Obtiene conexión a Redis"""
+    """Obtiene conexion a Redis."""
     try:
         r = redis.Redis(
             host=REDIS_HOST,
             port=REDIS_PORT,
             db=REDIS_DB,
-            decode_responses=True
+            decode_responses=True,
         )
 
-        r.ping()  # Probar conexión
-        print("✅ Conexión a Redis exitosa")
+        r.ping()  # Probar conexion
+        print("Conectado a Redis")
 
         return r
     except Exception as e:
-        print(f"❌ Error conectando a Redis: {e}")
+        print(f"Error conectando a Redis: {e}")
         return None
 
 
 # ===== RUTAS DE ARCHIVOS =====
-KAGGLE_CSV = "data/raw/flipkart_com-ecommerce_sample.csv"
-MANUAL_CSV = "data/raw/dataset_manual_IMDB_Top250.csv"
+AMAZON_CSV = "data/raw/amazon.csv"
+REDIS_CART_CSV = "data/raw/redis_cart_sim.csv"
+PROCESSED_CSV = "data/processed/amazon_processed.csv"
 
 if __name__ == "__main__":
-    print("🧪 Probando configuración...")
-    print(f"\n📁 Dataset Kaggle: {KAGGLE_CSV}")
-    print(f"📁 Dataset Manual: {MANUAL_CSV}")
-    
-    print("\n🧪 Probando conexiones...")
+    print("Probando configuracion...")
+    print(f"Dataset Amazon: {AMAZON_CSV}")
+
+    print("\nProbando conexiones...")
 
     mongo_client, mongo_db, mongo_col = get_mongo_connection()
     redis_client = get_redis_connection()
 
     if mongo_client and redis_client:
-        print("\n🎉 ¡Todas las conexiones funcionan!")
+        print("\nTodas las conexiones funcionan!")
     else:
-        print("\n⚠️ Revisa tu configuración")
-        
+        print("\nRevisa tu configuracion")

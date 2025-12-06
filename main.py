@@ -1,34 +1,81 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import plotly.express as px
+"""
+Pipeline ETL completo: Flipkart → MongoDB | Redis Cart Simulation
+Simula un Cyberday con múltiples productos y carritos en tiempo real.
+"""
+
+import sys
+from datetime import datetime
+
+# Importar módulos del pipeline
+from src.extract import extract_all
+from src.transform import transform_all, get_transformation_stats
+from src.load import load_all
+from src.integration import integration_all
+from src.config import get_mongo_connection, get_redis_connection
 
 
-df = pd.read_csv('IMDB Top 250 Movies.csv')
+def print_header(title: str):
+    """Imprime encabezado formateado."""
+    print("\n" + "=" * 70)
+    print(f" {title}")
+    print("=" * 70)
 
-real_gen = ""
-for i in df['genre']:
-    real_gen = real_gen+","+i
-all_gen = real_gen.split(',')[1:]
-unique_genres = list(set(all_gen))
 
-data = []
-for i in unique_genres:
-    c = 0
-    for j in df['genre']:
-        if i in j:
-            c+=1
-    data.append([i, c])
+def print_footer():
+    """Imprime pie formateado."""
+    print("=" * 70 + "\n")
+
+
+def main():
+    """Ejecuta el pipeline ETL completo."""
     
-gen_df = pd.DataFrame(data, columns=['Genre', 'Freq'])
-gen_df.sort_values(by = 'Freq', ascending = False, inplace = True)
-gen_df = gen_df.head(5)
+    print_header("🚀 PIPELINE ETL: CYBERDAY CON MONGODB Y REDIS")
+    print(f"Inicio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print_footer()
 
-plt.figure(figsize=(12,6),dpi = 150)
-sns.barplot(data = gen_df, x = 'Genre', y = 'Freq', palette='Paired')
-plt.title('Top 5 most Popular Genre')
-plt.show()
+    # ===== ETAPA 1: EXTRACT =====
+    print_header("📥 ETAPA 1: EXTRACT (Extracción)")
+    flipkart_df, redis_cart_df = extract_all()
+    
+    if flipkart_df is None or redis_cart_df is None:
+        print("[ERROR] No se pudieron cargar los datos")
+        sys.exit(1)
 
-fig = px.box(df, x='genre', y='box_office', color='genre', title='Box Office by Genre')
-fig.show()
+    print_footer()
+
+    # ===== ETAPA 2-3: TRANSFORM + LOAD =====
+    print_header("🔄 ETAPA 2: TRANSFORM (Transformación)")
+    flipkart_transformed, cart_transformed = transform_all()
+    stats = get_transformation_stats(flipkart_transformed, cart_transformed)
+    print_footer()
+
+    print_header("📤 ETAPA 3: LOAD (Carga a MongoDB y Redis)")
+    load_success = load_all(flipkart_transformed, cart_transformed, simulate_realtime=False)
+    
+    if not load_success:
+        print("[ADVERTENCIA] La carga no fue completamente exitosa")
+        print("  ⚠️  Asegúrate de que MongoDB y Redis estén ejecutándose")
+
+    print_footer()
+
+    # ===== ETAPA 4: INTEGRATION =====
+    print_header("🔀 ETAPA 4: INTEGRATION (Análisis Cruzado)")
+    report = integration_all()
+    print_footer()
+
+    # ===== RESUMEN FINAL =====
+    print_header("📊 RESUMEN DEL PIPELINE")
+    print(f"✅ Productos Flipkart: {stats['products']['total']}")
+    print(f"✅ Eventos de Carrito: {stats['carts']['total_events']}")
+    print(f"✅ Carritos Únicos: {stats['carts']['unique_carts']}")
+    print(f"✅ Clientes: {stats['carts']['unique_customers']}")
+    print(f"💰 Ingresos Totales: ${stats['carts']['total_revenue']:.2f}")
+    print(f"❌ Ingresos Perdidos: ${stats['carts']['lost_revenue']:.2f}")
+    print(f"📅 Timestamp: {stats['timestamp']}")
+    print_footer()
+
+    print("✨ Pipeline completado exitosamente")
+
+
+if __name__ == "__main__":
+    main()
