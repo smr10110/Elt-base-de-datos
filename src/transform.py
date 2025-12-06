@@ -18,16 +18,34 @@ def transform_amazon_products(df: Optional[pd.DataFrame]) -> Optional[pd.DataFra
     # Eliminar marca (no se desea guardar brand)
     if "brand" in df.columns:
         df = df.drop(columns=["brand"])
+        
+
+    # ---------------------------------------------------------
+    # NUEVO: FILTRO PARA ELIMINAR SIN NOMBRE Y SIN ID
+    # ---------------------------------------------------------
+    # 1. Eliminar filas donde product_name sea explícitamente NaN/None
+    df = df.dropna(subset=["product_name"])
+    df = df.dropna(subset=["product_id"])
+    
+    # 2. Eliminar filas donde el nombre sea un string vacío ("") o solo espacios ("   ")
+    # Esto es importante porque a veces el csv trae comillas vacías que no cuentan como NaN
+    df = df[df["product_name"].astype(str).str.strip() != ""]
+    df = df[df["product_id"].astype(str).str.strip() != ""]
+
+    # ---------------------------------------------------------
+    # ELIMINAR CAMPOS INNECESARIOS PARA ETL
+    # ---------------------------------------------------------
+    # Campos de reseñas e imágenes no son necesarios para análisis de productos/carritos
+    campos_innecesarios = ['user_id', 'user_name', 'review_id', 'review_title',
+                           'review_content', 'img_link', 'product_link']
+    df = df.drop(columns=[col for col in campos_innecesarios if col in df.columns], errors='ignore')
+    print("[TRANSFORM] Campos de reseñas e imágenes eliminados (no necesarios para ETL)")
 
     # Rellenar faltantes
-    df["product_name"] = df["product_name"].fillna("Unknown Product")
     df["category"] = df["category"].fillna("Uncategorized")
     df["rating"] = pd.to_numeric(df["rating"], errors="coerce").fillna(0)
     df["rating_count"] = pd.to_numeric(df["rating_count"], errors="coerce").fillna(0)
     df["about_product"] = df["about_product"].fillna("")
-    df["user_name"] = df["user_name"].fillna("Anonymous")
-    df["review_title"] = df["review_title"].fillna("")
-    df["review_content"] = df["review_content"].fillna("")
 
     # Limpiar precios (remover simbolos y comas)
     df["actual_price"] = (
