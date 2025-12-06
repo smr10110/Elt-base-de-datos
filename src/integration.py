@@ -6,7 +6,7 @@ Análisis y métricas para simular un Cyberday.
 import json
 from datetime import datetime
 import pandas as pd
-from config import get_mongo_connection, get_redis_connection
+from src.config import get_mongo_connection, get_redis_connection
 
 
 def get_product_performance_mongodb() -> dict:

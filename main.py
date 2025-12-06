@@ -1,6 +1,14 @@
 """
-Pipeline ETL completo: Flipkart → MongoDB | Redis Cart Simulation
+Pipeline ETL completo: Amazon → MongoDB | Redis Cart Simulation
 Simula un Cyberday con múltiples productos y carritos en tiempo real.
+Flujo del pipeline:
+1. VERIFICAR CONEXIONES → MongoDB + Redis
+2. EXTRACT → Leer amazon.csv + redis_cart_sim.csv
+3. TRANSFORM → Limpiar y transformar datos
+4. LOAD → Cargar a MongoDB + Redis
+5. INTEGRATION → Análisis cruzado y métricas
+6. VISUALIZACIONES → Generar gráficos
+7. RESUMEN → Estadísticas finales
 """
 
 import sys
@@ -8,11 +16,11 @@ from datetime import datetime
 
 # Importar módulos del pipeline
 from src.extract import extract_all
+from src.config import get_mongo_connection, get_redis_connection
 from src.transform import transform_all, get_transformation_stats
 from src.load import load_all
 from src.integration import integration_all
-from src.config import get_redis_connection
-
+from src.visualizations import generate_all_visualizations
 
 def print_header(title: str):
     """Imprime encabezado formateado."""
@@ -28,53 +36,87 @@ def print_footer():
 
 def main():
     """Ejecuta el pipeline ETL completo."""
-    
-    print_header("🚀 PIPELINE ETL: CYBERDAY CON MONGODB Y REDIS")
+
+    print_header("PIPELINE ETL: CYBERDAY AMAZON CON MONGODB Y REDIS")
     print(f"Inicio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print_footer()
 
+    # ===== VERIFICAR CONEXIONES =====
+    print_header("VERIFICANDO CONEXIONES A BASES DE DATOS")
+
+    print("[CONEXION] Verificando MongoDB...")
+    mongo_client, mongo_db, mongo_col = get_mongo_connection()
+    if mongo_client is None:
+        print("[ERROR] No se pudo conectar a MongoDB")
+        print("  Asegurate de ejecutar: mongod")
+        sys.exit(1)
+    mongo_client.close()
+    print("[OK] MongoDB conectado exitosamente")
+
+    print("\n[CONEXION] Verificando Redis...")
+    redis_client = get_redis_connection()
+    if redis_client is None:
+        print("[ERROR] No se pudo conectar a Redis")
+        print("  Asegurate de ejecutar: redis-server")
+        sys.exit(1)
+    redis_client.close()
+    print("[OK] Redis conectado exitosamente")
+
+    print_footer()
+
     # ===== ETAPA 1: EXTRACT =====
-    print_header("📥 ETAPA 1: EXTRACT (Extracción)")
-    flipkart_df, redis_cart_df = extract_all()
-    
-    if flipkart_df is None or redis_cart_df is None:
+    print_header("ETAPA 1: EXTRACT (Extraccion)")
+    amazon_df, redis_cart_df = extract_all()
+
+    if amazon_df is None or redis_cart_df is None:
         print("[ERROR] No se pudieron cargar los datos")
         sys.exit(1)
 
     print_footer()
 
-    # ===== ETAPA 2-3: TRANSFORM + LOAD =====
-    print_header("🔄 ETAPA 2: TRANSFORM (Transformación)")
-    flipkart_transformed, cart_transformed = transform_all()
-    stats = get_transformation_stats(flipkart_transformed, cart_transformed)
+    # ===== ETAPA 2: TRANSFORM =====
+    print_header("ETAPA 2: TRANSFORM (Transformacion)")
+    amazon_transformed, cart_transformed = transform_all()
+    stats = get_transformation_stats(amazon_transformed, cart_transformed)
     print_footer()
 
-    print_header("📤 ETAPA 3: LOAD (Carga a MongoDB y Redis)")
-    load_success = load_all(flipkart_transformed, cart_transformed, simulate_realtime=False)
-    
+    # ===== ETAPA 3: LOAD =====
+    print_header("ETAPA 3: LOAD (Carga a MongoDB y Redis)")
+    load_success = load_all(amazon_transformed, cart_transformed, simulate_realtime=False)
+
     if not load_success:
         print("[ADVERTENCIA] La carga no fue completamente exitosa")
-        print("  ⚠️  Asegúrate de que MongoDB y Redis estén ejecutándose")
+        print("  Asegurate de que MongoDB y Redis esten ejecutandose")
 
     print_footer()
 
     # ===== ETAPA 4: INTEGRATION =====
-    print_header("🔀 ETAPA 4: INTEGRATION (Análisis Cruzado)")
+    print_header("ETAPA 4: INTEGRATION (Analisis Cruzado)")
     report = integration_all()
     print_footer()
 
-    # ===== RESUMEN FINAL =====
-    print_header("📊 RESUMEN DEL PIPELINE")
-    print(f"✅ Productos Flipkart: {stats['products']['total']}")
-    print(f"✅ Eventos de Carrito: {stats['carts']['total_events']}")
-    print(f"✅ Carritos Únicos: {stats['carts']['unique_carts']}")
-    print(f"✅ Clientes: {stats['carts']['unique_customers']}")
-    print(f"💰 Ingresos Totales: ${stats['carts']['total_revenue']:.2f}")
-    print(f"❌ Ingresos Perdidos: ${stats['carts']['lost_revenue']:.2f}")
-    print(f"📅 Timestamp: {stats['timestamp']}")
+    # ===== ETAPA 5: VISUALIZACIONES =====
+    print_header("ETAPA 5: VISUALIZACIONES (Graficos)")
+    try:
+        generate_all_visualizations()
+    except Exception as e:
+        print(f"[ADVERTENCIA] Error generando visualizaciones: {e}")
     print_footer()
 
-    print("✨ Pipeline completado exitosamente")
+    # ===== RESUMEN FINAL =====
+    print_header("RESUMEN DEL PIPELINE")
+    print(f"Productos Amazon: {stats['products']['total']}")
+    print(f"Categorias: {stats['products']['categories']}")
+    print(f"Rating Promedio: {stats['products']['avg_rating']:.2f}")
+    print(f"Eventos de Carrito: {stats['carts']['total_events']}")
+    print(f"Carritos Unicos: {stats['carts']['unique_carts']}")
+    print(f"Clientes: {stats['carts']['unique_customers']}")
+    print(f"Ingresos Totales: ${stats['carts']['total_revenue']:.2f}")
+    print(f"Ingresos Perdidos: ${stats['carts']['lost_revenue']:.2f}")
+    print(f"Timestamp: {stats['timestamp']}")
+    print_footer()
+
+    print("Pipeline completado exitosamente")
 
 
 if __name__ == "__main__":

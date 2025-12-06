@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import json
 from pathlib import Path
-from config import get_mongo_connection, get_redis_connection
+from src.config import get_mongo_connection, get_redis_connection
 
 
 def plot_product_categories_distribution():
