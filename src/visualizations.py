@@ -6,43 +6,47 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import json
-from src.config import get_mongo_connection, get_redis_connection
+from pathlib import Path
+from config import get_mongo_connection, get_redis_connection
 
 
-def plot_product_brands_distribution():
-    """Gráfico de distribución de productos por marca."""
+def plot_product_categories_distribution():
+    """Gráfico de distribución de productos por categoría."""
     try:
         _, _, collection = get_mongo_connection()
         if collection is None:
             return
 
-        # Agregación
+        # Agregación por categoría (Amazon no tiene campo brand)
         pipeline = [
-            {"$group": {"_id": "$brand", "count": {"$sum": 1}}},
+            {"$group": {"_id": "$category", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 15},
         ]
 
         results = list(collection.aggregate(pipeline))
-        
+
         if not results:
             print("[VIZ] No hay datos de productos")
             return
 
-        brands = [r["_id"] for r in results]
+        categories = [r["_id"] for r in results]
         counts = [r["count"] for r in results]
 
+        # Crear directorio si no existe
+        Path("docs/images").mkdir(parents=True, exist_ok=True)
+
         plt.figure(figsize=(12, 6))
-        plt.barh(brands, counts, color="steelblue")
+        plt.barh(categories, counts, color="steelblue")
         plt.xlabel("Cantidad de Productos")
-        plt.title("Top 15 Marcas por Cantidad de Productos")
+        plt.title("Top 15 Categorías por Cantidad de Productos - Amazon")
         plt.tight_layout()
-        plt.savefig("data/processed/brands_distribution.png", dpi=100, bbox_inches="tight")
-        print("[VIZ] Gráfico guardado: brands_distribution.png")
+        plt.savefig("docs/images/categories_distribution.png", dpi=100, bbox_inches="tight")
+        print("[VIZ] Gráfico guardado: docs/images/categories_distribution.png")
         plt.close()
 
     except Exception as e:
-        print(f"[VIZ] Error en gráfico de marcas: {e}")
+        print(f"[VIZ] Error en gráfico de categorías: {e}")
 
 
 def plot_price_distribution():
@@ -53,20 +57,23 @@ def plot_price_distribution():
             return
 
         # Obtener precios
-        prices = [doc["discounted_price"] for doc in collection.find({}, {"discounted_price": 1})]
-        
+        prices = [doc["discounted_price"] for doc in collection.find({}, {"discounted_price": 1}) if doc.get("discounted_price", 0) > 0]
+
         if not prices:
             print("[VIZ] No hay datos de precios")
             return
+
+        # Crear directorio si no existe
+        Path("docs/images").mkdir(parents=True, exist_ok=True)
 
         plt.figure(figsize=(12, 6))
         plt.hist(prices, bins=50, color="coral", edgecolor="black", alpha=0.7)
         plt.xlabel("Precio Descuentado (Rupias)")
         plt.ylabel("Cantidad de Productos")
-        plt.title("Distribución de Precios - Flipkart")
+        plt.title("Distribución de Precios - Amazon")
         plt.tight_layout()
-        plt.savefig("data/processed/price_distribution.png", dpi=100, bbox_inches="tight")
-        print("[VIZ] Gráfico guardado: price_distribution.png")
+        plt.savefig("docs/images/price_distribution.png", dpi=100, bbox_inches="tight")
+        print("[VIZ] Gráfico guardado: docs/images/price_distribution.png")
         plt.close()
 
     except Exception as e:
@@ -99,15 +106,18 @@ def plot_cart_events_timeline():
             print("[VIZ] No hay eventos de carrito")
             return
 
+        # Crear directorio si no existe
+        Path("docs/images").mkdir(parents=True, exist_ok=True)
+
         plt.figure(figsize=(10, 6))
         colors = ["#2ecc71", "#3498db", "#e74c3c", "#f39c12"]
         plt.bar(events_by_type.keys(), events_by_type.values(), color=colors)
         plt.xlabel("Tipo de Evento")
         plt.ylabel("Cantidad de Eventos")
-        plt.title("Eventos de Carrito - Cyberday")
+        plt.title("Eventos de Carrito - Cyberday Amazon")
         plt.tight_layout()
-        plt.savefig("data/processed/cart_events.png", dpi=100, bbox_inches="tight")
-        print("[VIZ] Gráfico guardado: cart_events.png")
+        plt.savefig("docs/images/cart_events.png", dpi=100, bbox_inches="tight")
+        print("[VIZ] Gráfico guardado: docs/images/cart_events.png")
         plt.close()
 
         redis_client.close()
@@ -132,10 +142,10 @@ def plot_revenue_metrics():
             cart_data = redis_client.hgetall(key)
             revenue = float(cart_data.get("total_revenue", 0))
             lost = float(cart_data.get("lost_revenue", 0))
-            
+
             total_revenue += revenue
             lost_revenue += lost
-            
+
             if revenue > 0:
                 revenue_by_cart.append(revenue)
 
@@ -143,12 +153,15 @@ def plot_revenue_metrics():
             print("[VIZ] No hay datos de ingresos")
             return
 
+        # Crear directorio si no existe
+        Path("docs/images").mkdir(parents=True, exist_ok=True)
+
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
 
         # Gráfico 1: Ingresos vs Perdidos
         ax1.bar(["Ingresos", "Perdidos"], [total_revenue, lost_revenue], color=["#27ae60", "#e74c3c"])
         ax1.set_ylabel("Rupias")
-        ax1.set_title("Ingresos Totales vs Perdidos")
+        ax1.set_title("Ingresos Totales vs Perdidos - Amazon")
         for i, v in enumerate([total_revenue, lost_revenue]):
             ax1.text(i, v + 100, f"${v:.0f}", ha="center", va="bottom", fontweight="bold")
 
@@ -159,8 +172,8 @@ def plot_revenue_metrics():
         ax2.set_title("Distribución de Ingresos")
 
         plt.tight_layout()
-        plt.savefig("data/processed/revenue_metrics.png", dpi=100, bbox_inches="tight")
-        print("[VIZ] Gráfico guardado: revenue_metrics.png")
+        plt.savefig("docs/images/revenue_metrics.png", dpi=100, bbox_inches="tight")
+        print("[VIZ] Gráfico guardado: docs/images/revenue_metrics.png")
         plt.close()
 
         redis_client.close()
@@ -171,14 +184,14 @@ def plot_revenue_metrics():
 
 def generate_all_visualizations():
     """Genera todas las visualizaciones."""
-    print("\n[VIZ] Generando visualizaciones del Cyberday...\n")
-    
-    plot_product_brands_distribution()
+    print("\n[VIZ] Generando visualizaciones del Cyberday Amazon...\n")
+
+    plot_product_categories_distribution()
     plot_price_distribution()
     plot_cart_events_timeline()
     plot_revenue_metrics()
-    
-    print("\n[VIZ] ✅ Todas las visualizaciones completadas\n")
+
+    print("\n[VIZ] Todas las visualizaciones completadas\n")
 
 
 if __name__ == "__main__":

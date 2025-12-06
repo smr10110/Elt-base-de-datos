@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 import pandas as pd
 
-from src.config import AMAZON_CSV, REDIS_CART_CSV
+from config import AMAZON_CSV, REDIS_CART_CSV
 
 
 def _load_csv(path_str: str) -> Optional[pd.DataFrame]:

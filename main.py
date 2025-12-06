@@ -11,7 +11,7 @@ from src.extract import extract_all
 from src.transform import transform_all, get_transformation_stats
 from src.load import load_all
 from src.integration import integration_all
-from src.config import get_mongo_connection, get_redis_connection
+from src.config import get_redis_connection
 
 
 def print_header(title: str):
